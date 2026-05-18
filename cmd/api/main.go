@@ -12,6 +12,9 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/zonafirmann/next-go-pos-backend/internal/config"
 	"github.com/zonafirmann/next-go-pos-backend/internal/handlers"
+
+	// Menggunakan alias 'posMiddleware' agar tidak bentrok dengan middleware bawaan chi
+	posMiddleware "github.com/zonafirmann/next-go-pos-backend/internal/middleware"
 )
 
 func main() {
@@ -37,6 +40,7 @@ func main() {
 
 	// Initialize Route Handlers
 	authHandler := handlers.AuthHandler{DB: db}
+	productHandler := handlers.ProductHandler{DB: db}
 
 	// 4. Public Routes (No authentication required)
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -44,10 +48,20 @@ func main() {
 		w.Write([]byte(`{"status": "online", "message": "Next-Go Enterprise POS Backend Engine is running", "version": "1.0.0"}`))
 	})
 
-	// 5. Authentication Routes (Prefixed with /api)
+	// 5. API Routes (Prefixed with /api)
 	r.Route("/api", func(r chi.Router) {
+		// Public authentication routes
 		r.Post("/register", authHandler.Register)
 		r.Post("/login", authHandler.Login)
+
+		// Protected routes (Requires valid JWT Token)
+		r.Group(func(r chi.Router) {
+			// Mount our custom JWT middleware (Satpam) to this specific group
+			r.Use(posMiddleware.RequireAuth)
+
+			r.Get("/products", productHandler.GetProducts)
+			r.Post("/checkout", productHandler.Checkout)
+		})
 	})
 
 	// 6. Port Allocation and Server Boot
