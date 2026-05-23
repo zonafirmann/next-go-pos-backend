@@ -49,10 +49,14 @@ func main() {
 	})
 
 	// 5. API Routes (Prefixed with /api)
+	// 5. API Routes (Prefixed with /api)
 	r.Route("/api", func(r chi.Router) {
 		// Public authentication routes
 		r.Post("/register", authHandler.Register)
 		r.Post("/login", authHandler.Login)
+
+		// 👇 TARUH DI SINI! (Di luar r.Group agar lolos dari Satpam)
+		r.Get("/report", productHandler.GenerateDailyReport)
 
 		// Protected routes (Requires valid JWT Token)
 		r.Group(func(r chi.Router) {
@@ -61,6 +65,7 @@ func main() {
 
 			r.Get("/products", productHandler.GetProducts)
 			r.Post("/checkout", productHandler.Checkout)
+			// (Pastikan /report tidak ada di dalam sini lagi)
 		})
 	})
 

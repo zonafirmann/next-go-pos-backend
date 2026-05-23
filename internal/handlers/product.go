@@ -3,7 +3,10 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -74,4 +77,58 @@ func (h *ProductHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 	// 4. Send success confirmation
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"message": "Transaction processed successfully"}`))
+}
+
+// GenerateDailyReport simulates processing thousands of records concurrently using Goroutines.
+func (h *ProductHandler) GenerateDailyReport(w http.ResponseWriter, r *http.Request) {
+	// 1. Record the start time to measure execution speed
+	startTime := time.Now()
+
+	// 2. Simulate 10 heavy background tasks (e.g., generating PDFs, sending emails)
+	// In a synchronous language, 10 tasks * 1 second = 10 seconds total.
+	totalTasks := 10
+
+	// 3. Initialize a WaitGroup to act as the "supervisor" for our Goroutines
+	var wg sync.WaitGroup
+
+	// 4. Create a buffered channel to safely collect results from multiple concurrent workers
+	results := make(chan string, totalTasks)
+
+	// 5. Dispatch the worker Goroutines
+	for i := 1; i <= totalTasks; i++ {
+		wg.Add(1) // Notify the WaitGroup that a new worker is starting
+
+		// The 'go' keyword spins up a new concurrent thread instantly
+		go func(taskID int) {
+			defer wg.Done() // Notify the WaitGroup when this worker finishes
+
+			// Simulate a heavy operation taking exactly 1 second
+			time.Sleep(1 * time.Second)
+
+			// Send the result safely into the channel
+			results <- fmt.Sprintf("✅ Transaction report #%d generated successfully", taskID)
+		}(i)
+	}
+
+	// 6. Block the main thread until ALL workers report that they are done
+	wg.Wait()
+	close(results) // Close the channel since no more data will be sent
+
+	// 7. Collect all processed results from the channel
+	var reportDetails []string
+	for res := range results {
+		reportDetails = append(reportDetails, res)
+	}
+
+	// 8. Calculate the total execution time
+	duration := time.Since(startTime)
+
+	// 9. Send the final compiled report back to the Frontend
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message":         "Enterprise Daily Report Completed!",
+		"total_processed": len(reportDetails),
+		"time_taken_ms":   duration.Milliseconds(),
+		"details":         reportDetails,
+	})
 }
