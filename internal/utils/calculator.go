@@ -6,10 +6,7 @@ func CalculateFinalPrice(subtotal float64, discountPercent float64, taxPercent f
 	// 1. Calculate discount deduction
 	discountAmount := subtotal * (discountPercent / 100)
 	priceAfterDiscount := subtotal - discountAmount
-
-	// 2. Calculate tax addition based on the discounted price
 	taxAmount := priceAfterDiscount * (taxPercent / 100)
-
 	// 3. Return final grand total
 	return priceAfterDiscount + taxAmount
 }
